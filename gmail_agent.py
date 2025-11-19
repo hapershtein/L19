@@ -5,6 +5,8 @@ Gmail Agent - Retrieve and export emails to Excel
 import os
 import pickle
 import argparse
+import re
+import base64
 from datetime import datetime
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -58,7 +60,15 @@ class GmailAgent:
                 flow = InstalledAppFlow.from_client_secrets_file(
                     self.credentials_file, SCOPES
                 )
-                creds = flow.run_local_server(port=0)
+
+                # Try to run local server with browser, fallback to console if it fails
+                try:
+                    creds = flow.run_local_server(port=0, open_browser=True)
+                except Exception as e:
+                    print(f"\nCouldn't open browser automatically: {e}")
+                    print("\nUsing console authentication flow instead...")
+                    print("You'll receive a URL to visit in your browser.\n")
+                    creds = flow.run_console()
 
             # Save the credentials for the next run
             with open(self.token_file, 'wb') as token:
@@ -66,6 +76,62 @@ class GmailAgent:
 
         self.service = build('gmail', 'v1', credentials=creds)
         print("Successfully authenticated with Gmail API")
+
+    def extract_first_url(self, text):
+        """
+        Extract the first URL found in text
+
+        Args:
+            text: Text to search for URLs
+
+        Returns:
+            First URL found or empty string
+        """
+        if not text:
+            return ''
+
+        # URL pattern - matches only https://github.com URLs
+        url_pattern = r'https?://github\.com[^\s<>"{}|\\^`\[\]]+'
+
+        match = re.search(url_pattern, text)
+        if match:
+            url = match.group(0)
+            # Clean up common trailing characters
+            url = re.sub(r'[,;.\)]+$', '', url)
+            return url
+
+        return ''
+
+    def get_message_body(self, payload):
+        """
+        Extract text from email message payload
+
+        Args:
+            payload: Gmail message payload
+
+        Returns:
+            Email body text
+        """
+        body = ''
+
+        if 'body' in payload and 'data' in payload['body']:
+            body = base64.urlsafe_b64decode(payload['body']['data']).decode('utf-8', errors='ignore')
+        elif 'parts' in payload:
+            for part in payload['parts']:
+                if part['mimeType'] == 'text/plain':
+                    if 'data' in part['body']:
+                        body = base64.urlsafe_b64decode(part['body']['data']).decode('utf-8', errors='ignore')
+                        break
+                elif part['mimeType'] == 'text/html' and not body:
+                    if 'data' in part['body']:
+                        body = base64.urlsafe_b64decode(part['body']['data']).decode('utf-8', errors='ignore')
+                elif 'parts' in part:
+                    # Recursively check nested parts
+                    body = self.get_message_body(part)
+                    if body:
+                        break
+
+        return body
 
     def search_emails(self, query, max_results=100):
         """
@@ -101,12 +167,11 @@ class GmailAgent:
             for i, message in enumerate(messages, 1):
                 msg_id = message['id']
 
-                # Get full message details
+                # Get full message details (including body for URL extraction)
                 msg = self.service.users().messages().get(
                     userId='me',
                     id=msg_id,
-                    format='metadata',
-                    metadataHeaders=['From', 'To', 'Subject', 'Date']
+                    format='full'
                 ).execute()
 
                 # Extract headers
@@ -122,12 +187,17 @@ class GmailAgent:
                 except:
                     timestamp = date_str
 
+                # Extract body and find first URL
+                body = self.get_message_body(msg['payload'])
+                repo_url = self.extract_first_url(body)
+
                 email_data.append({
                     'id': msg_id,
                     'timestamp': timestamp,
                     'subject': subject,
                     'from': from_email,
-                    'search_criteria': query
+                    'search_criteria': query,
+                    'repo_url': repo_url
                 })
 
                 if i % 10 == 0:
@@ -160,7 +230,7 @@ class GmailAgent:
         ws.title = "Gmail Export"
 
         # Define headers
-        headers = ['ID', 'TimeStamp', 'Subject', 'Search Criteria']
+        headers = ['ID', 'TimeStamp', 'Subject', 'Search Criteria', 'github Repo URL']
         ws.append(headers)
 
         # Style the header row
@@ -178,7 +248,8 @@ class GmailAgent:
                 email['id'],
                 email['timestamp'],
                 email['subject'],
-                email['search_criteria']
+                email['search_criteria'],
+                email.get('repo_url', '')
             ])
 
         # Adjust column widths
@@ -186,6 +257,7 @@ class GmailAgent:
         ws.column_dimensions['B'].width = 20  # TimeStamp
         ws.column_dimensions['C'].width = 50  # Subject
         ws.column_dimensions['D'].width = 30  # Search Criteria
+        ws.column_dimensions['E'].width = 60  # Repo URL
 
         # Save the workbook
         wb.save(output_file)

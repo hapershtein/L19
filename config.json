@@ -2,28 +2,10 @@
   "credentials_file": "credentials.json",
   "searches": [
     {
-      "name": "Unread Emails",
-      "query": "is:unread",
-      "output": "unread_emails.xlsx",
+      "name": "Email Testing Label",
+      "query": "label:EmailTesting",
+      "output": "email_Testing.xlsx",
       "max_results": 50
-    },
-    {
-      "name": "Important with Attachments",
-      "query": "is:important has:attachment",
-      "output": "important_attachments.xlsx",
-      "max_results": 100
-    },
-    {
-      "name": "Last Week from Boss",
-      "query": "from:boss@company.com newer_than:7d",
-      "output": "boss_emails_week.xlsx",
-      "max_results": 50
-    },
-    {
-      "name": "Invoices from Last Month",
-      "query": "subject:invoice after:2024/10/01 before:2024/11/01",
-      "output": "invoices_october.xlsx",
-      "max_results": 100
     }
   ]
 }

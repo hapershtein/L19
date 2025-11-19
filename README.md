@@ -287,11 +287,22 @@ The report contains detailed execution results:
 
 ## First Run
 
-On the first run, the script will:
+On the first run, the script will authenticate with Google:
 
-1. Open your default web browser
-2. Ask you to log in to your Google account
-3. Request permission to read your Gmail
+### Automatic Browser Authentication (Default)
+
+1. Opens your default web browser automatically
+2. Redirects to Google login page
+3. Asks you to log in and grant permissions
+4. Saves the authentication token as `token.pickle` for future use
+
+### Console Authentication (Fallback for WSL/Headless)
+
+If the browser can't be opened automatically (common in WSL or remote environments), the script will:
+
+1. Display a URL in the console
+2. Ask you to manually copy and paste it into your browser
+3. After authorization, provide a code to paste back into the console
 4. Save the authentication token as `token.pickle` for future use
 
 The token is saved locally and will be reused on subsequent runs, so you won't need to authenticate every time.
@@ -304,11 +315,13 @@ The Excel file contains the following columns:
 2. **TimeStamp** - Date and time the email was received
 3. **Subject** - Email subject line
 4. **Search Criteria** - The search query used to retrieve this email
+5. **Repo URL** - The first URL found in the email body (useful for tracking links to repositories, documents, or resources)
 
 The Excel file includes:
 - Formatted headers with blue background
 - Auto-adjusted column widths
 - Professional styling
+- Automatic URL extraction from email body content
 
 ## Troubleshooting
 
@@ -334,6 +347,18 @@ python gmail_agent.py --query "your search"
 ### Rate Limits
 
 The Gmail API has usage quotas. If you're retrieving large numbers of emails, you may hit rate limits. The default `--max` is set to 100 to stay within reasonable limits.
+
+### "xdg-open: no method available for opening" (WSL/Linux)
+
+This occurs when running in WSL or a headless environment where the browser can't be opened automatically. The script will automatically fall back to console authentication mode where you:
+
+1. Copy the URL displayed in the terminal
+2. Paste it into your browser (on Windows or any device)
+3. Complete the authentication
+4. Copy the authorization code from the browser
+5. Paste it back into the terminal
+
+No additional configuration is needed - the fallback happens automatically.
 
 ## Security Notes
 
