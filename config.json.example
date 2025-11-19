@@ -1,0 +1,59 @@
+{
+  "_comment": "Gmail Agent Pipeline Configuration",
+  "_description": "This file defines multiple email searches to be executed in sequence",
+
+  "credentials_file": "credentials.json",
+
+  "searches": [
+    {
+      "name": "Unread Emails",
+      "query": "is:unread",
+      "output": "unread_emails.xlsx",
+      "max_results": 50
+    },
+    {
+      "name": "Important with Attachments",
+      "query": "is:important has:attachment",
+      "output": "important_attachments.xlsx",
+      "max_results": 100
+    },
+    {
+      "name": "Last Week Emails",
+      "query": "newer_than:7d",
+      "output": "last_week.xlsx",
+      "max_results": 200
+    },
+    {
+      "name": "Emails from Specific Sender",
+      "query": "from:example@gmail.com",
+      "output": "from_example.xlsx",
+      "max_results": 50
+    },
+    {
+      "name": "Invoice Emails",
+      "query": "subject:invoice has:attachment",
+      "output": "invoices.xlsx",
+      "max_results": 100
+    },
+    {
+      "name": "Date Range Query",
+      "query": "after:2024/01/01 before:2024/12/31",
+      "output": "year_2024.xlsx",
+      "max_results": 500
+    },
+    {
+      "name": "Multiple Criteria",
+      "query": "from:boss@company.com is:important newer_than:30d",
+      "output": "important_from_boss.xlsx",
+      "max_results": 100
+    }
+  ],
+
+  "_field_descriptions": {
+    "credentials_file": "Path to OAuth 2.0 credentials file (optional, defaults to 'credentials.json')",
+    "name": "Descriptive name for the search (optional, defaults to 'Search N')",
+    "query": "Gmail search query using Gmail search operators (required)",
+    "output": "Output Excel filename (optional, defaults to 'search_N.xlsx')",
+    "max_results": "Maximum number of emails to retrieve (optional, defaults to 100)"
+  }
+}
