@@ -6,8 +6,10 @@ import json
 import os
 import sys
 import argparse
+import asyncio
 from datetime import datetime
 from gmail_agent import GmailAgent
+from analyze_repos import RepoAnalyzer
 
 
 class GmailPipeline:
@@ -226,6 +228,84 @@ class GmailPipeline:
 
         print(f"\nReport saved to {output_file}")
 
+    async def analyze_repositories(self, analyze_config):
+        """
+        Run repository analysis on output files
+
+        Args:
+            analyze_config: Configuration for repository analysis
+
+        Returns:
+            Analysis results
+        """
+        print(f"\n{'='*70}")
+        print(f"Starting Repository Analysis")
+        print(f"{'='*70}\n")
+
+        input_file = analyze_config.get('input_file')
+        output_file = analyze_config.get('output_file', 'Output_23.xlsx')
+        temp_dir = analyze_config.get('temp_dir', 'TempFiles')
+        cleanup = analyze_config.get('cleanup', True)
+
+        if not input_file:
+            print("Error: 'input_file' not specified in analyze_repos configuration")
+            return None
+
+        if not os.path.exists(input_file):
+            print(f"Warning: Input file '{input_file}' not found. Skipping repository analysis.")
+            return None
+
+        try:
+            analyzer = RepoAnalyzer(
+                input_file=input_file,
+                output_file=output_file,
+                temp_dir=temp_dir
+            )
+
+            results = await analyzer.run(cleanup=cleanup)
+            return results
+
+        except Exception as e:
+            print(f"Error during repository analysis: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+
+
+async def async_main(args):
+    """Async main function to support repository analysis"""
+    try:
+        # Create and run pipeline
+        pipeline = GmailPipeline(config_file=args.config)
+        pipeline.run(skip_on_error=args.skip_on_error)
+
+        # Generate report if requested
+        if args.report:
+            pipeline.generate_report(output_file=args.report)
+
+        # Run repository analysis if configured
+        if pipeline.config and 'analyze_repos' in pipeline.config:
+            await pipeline.analyze_repositories(pipeline.config['analyze_repos'])
+
+        # Exit with appropriate code
+        failed = sum(1 for r in pipeline.results if r['status'] == 'error')
+        sys.exit(1 if failed > 0 else 0)
+
+    except FileNotFoundError as e:
+        print(f"\nError: {e}")
+        sys.exit(1)
+    except ValueError as e:
+        print(f"\nConfiguration Error: {e}")
+        sys.exit(1)
+    except KeyboardInterrupt:
+        print(f"\n\nPipeline interrupted by user.")
+        sys.exit(1)
+    except Exception as e:
+        print(f"\nUnexpected Error: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
+
 
 def main():
     """Main function to run the pipeline"""
@@ -280,33 +360,8 @@ Usage:
 
     args = parser.parse_args()
 
-    try:
-        # Create and run pipeline
-        pipeline = GmailPipeline(config_file=args.config)
-        pipeline.run(skip_on_error=args.skip_on_error)
-
-        # Generate report if requested
-        if args.report:
-            pipeline.generate_report(output_file=args.report)
-
-        # Exit with appropriate code
-        failed = sum(1 for r in pipeline.results if r['status'] == 'error')
-        sys.exit(1 if failed > 0 else 0)
-
-    except FileNotFoundError as e:
-        print(f"\nError: {e}")
-        sys.exit(1)
-    except ValueError as e:
-        print(f"\nConfiguration Error: {e}")
-        sys.exit(1)
-    except KeyboardInterrupt:
-        print(f"\n\nPipeline interrupted by user.")
-        sys.exit(1)
-    except Exception as e:
-        print(f"\nUnexpected Error: {e}")
-        import traceback
-        traceback.print_exc()
-        sys.exit(1)
+    # Run async main to support repository analysis
+    asyncio.run(async_main(args))
 
 
 if __name__ == '__main__':

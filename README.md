@@ -1,18 +1,28 @@
 # Gmail Agent - Email Retrieval and Export Tool
 
-A Python agent that connects to Gmail, retrieves emails based on search criteria, and exports them to Excel format.
+A Python agent system that connects to Gmail, retrieves emails based on search criteria, extracts GitHub repository URLs, and optionally clones and analyzes the repositories with code metrics.
 
 ## Features
 
+**Gmail Agent:**
 - OAuth 2.0 authentication with Gmail API
 - Flexible email search using Gmail's search syntax
 - Export emails to Excel with formatted columns
+- Automatic GitHub URL extraction from email bodies
 - Command-line interface for easy automation
 - Supports pagination for large result sets
+
+**Analyze Repos Agent:**
+- Async parallel repository cloning (up to 5 concurrent)
+- Code metrics analysis (total lines, small files, grade calculation)
+- Automatic cleanup of temporary files
+- Progress tracking and error handling
+- Integrates seamlessly with Gmail Agent pipeline
 
 ## Requirements
 
 - Python 3.7 or higher
+- Git installed and available in PATH (for repository analysis)
 - Google Cloud Project with Gmail API enabled
 - OAuth 2.0 credentials from Google Cloud Console
 
@@ -144,11 +154,12 @@ python gmail_agent.py --query "from:client@example.com after:2024/01/01 has:atta
 
 ### Pipeline Mode
 
-Pipeline mode allows you to execute multiple searches in sequence using a JSON configuration file. This is ideal for:
+Pipeline mode allows you to execute multiple searches in sequence using a JSON configuration file, and optionally analyze GitHub repositories found in the emails. This is ideal for:
 - Running scheduled email exports
 - Batch processing multiple search criteria
 - Automating recurring email retrieval tasks
 - Generating multiple reports at once
+- **Analyzing GitHub repositories from email links (integrated repo analysis)**
 
 #### Creating a Configuration File
 
@@ -176,11 +187,19 @@ Create a `config.json` file with your search configurations:
       "output": "boss_emails_week.xlsx",
       "max_results": 50
     }
-  ]
+  ],
+  "analyze_repos": {
+    "input_file": "boss_emails_week.xlsx",
+    "output_file": "analyzed_repos.xlsx",
+    "temp_dir": "TempFiles",
+    "cleanup": true
+  }
 }
 ```
 
 #### Configuration Fields
+
+**Search Configuration:**
 
 Each search in the configuration supports:
 
@@ -189,9 +208,18 @@ Each search in the configuration supports:
 - **output** (optional): Output Excel filename (defaults to "search_N.xlsx")
 - **max_results** (optional): Maximum emails to retrieve (defaults to 100)
 
-Global configuration:
+**Global Configuration:**
 
 - **credentials_file** (optional): Path to OAuth credentials (defaults to "credentials.json")
+
+**Repository Analysis (Optional):**
+
+Add an `analyze_repos` section to automatically analyze GitHub repositories from one of your output files:
+
+- **input_file** (required): Excel file with GitHub URLs to analyze (should match one of your search outputs)
+- **output_file** (optional): Output file for analysis results (defaults to "Output_23.xlsx")
+- **temp_dir** (optional): Directory for cloning repos (defaults to "TempFiles")
+- **cleanup** (optional): Remove cloned repos after analysis (defaults to true)
 
 #### Running the Pipeline
 
@@ -285,6 +313,67 @@ The report contains detailed execution results:
 }
 ```
 
+#### Integrated Workflow Example
+
+Here's a complete workflow that retrieves emails and analyzes repositories:
+
+```json
+{
+  "credentials_file": "credentials.json",
+  "searches": [
+    {
+      "name": "Student Repo Submissions",
+      "query": "label:EmailTesting",
+      "output": "student_repos.xlsx",
+      "max_results": 100
+    }
+  ],
+  "analyze_repos": {
+    "input_file": "student_repos.xlsx",
+    "output_file": "graded_repos.xlsx",
+    "temp_dir": "TempFiles",
+    "cleanup": true
+  }
+}
+```
+
+When you run this configuration:
+
+1. **Gmail Agent** retrieves emails matching "label:EmailTesting"
+2. Extracts GitHub URLs from email bodies
+3. Exports to `student_repos.xlsx` with columns: ID, TimeStamp, Subject, Search Criteria, github Repo URL
+4. **Analyze Repos Agent** automatically:
+   - Clones each repository (parallel, up to 5 at once)
+   - Counts total lines and lines in small files (<150 lines)
+   - Calculates grade metric
+   - Exports to `graded_repos.xlsx` with additional columns: Total Lines, Lines in Small Files, Grade
+5. Cleans up temporary files
+
+**Output:**
+
+```
+Starting pipeline execution
+──────────────────────────────────────────────────────────────────────
+[1/1] Student Repo Submissions
+Query: label:EmailTesting
+Found 15 messages. Retrieving details...
+✓ Success: 15 emails exported to student_repos.xlsx
+
+Starting Repository Analysis
+──────────────────────────────────────────────────────────────────────
+[12345] Cloning https://github.com/student1/project...
+[12346] Cloning https://github.com/student2/project...
+[12345] ✓ Clone successful
+[12345] Analyzing code...
+[12345] ✓ Analysis complete: 3,421 total lines, 1,876 lines in small files, Grade: 1.82
+
+Analysis Summary
+Total Repositories: 15
+Successfully Analyzed: 14
+Clone Failed: 1
+Average Lines per Repo: 4,123
+```
+
 ## First Run
 
 On the first run, the script will authenticate with Google:
@@ -359,6 +448,31 @@ This occurs when running in WSL or a headless environment where the browser can'
 5. Paste it back into the terminal
 
 No additional configuration is needed - the fallback happens automatically.
+
+## Standalone Repository Analysis
+
+You can also run the repository analysis agent independently, without the Gmail pipeline:
+
+```bash
+# Analyze repos from any Excel file with GitHub URLs
+python analyze_repos.py --input Output_12.xlsx --output analyzed.xlsx
+
+# Keep cloned repos for manual inspection
+python analyze_repos.py --input repos.xlsx --no-cleanup
+
+# Use custom temp directory
+python analyze_repos.py --input repos.xlsx --temp-dir MyRepos
+```
+
+The input Excel file must have a column named "github Repo URL" containing GitHub repository URLs.
+
+**Output includes:**
+- All original columns from input file
+- **Total Lines** - Total lines of code in entire repository
+- **Lines in Small Files (<150)** - Lines in files with fewer than 150 lines
+- **Grade** - Ratio of total lines to small files lines (higher = more complex/consolidated code)
+
+See `ANALYZE_REPOS_README.md` for detailed documentation on the repository analysis agent.
 
 ## Security Notes
 

@@ -49,11 +49,23 @@
     }
   ],
 
+  "analyze_repos": {
+    "input_file": "important_from_boss.xlsx",
+    "output_file": "analyzed_repos.xlsx",
+    "temp_dir": "TempFiles",
+    "cleanup": true
+  },
+
   "_field_descriptions": {
     "credentials_file": "Path to OAuth 2.0 credentials file (optional, defaults to 'credentials.json')",
     "name": "Descriptive name for the search (optional, defaults to 'Search N')",
     "query": "Gmail search query using Gmail search operators (required)",
     "output": "Output Excel filename (optional, defaults to 'search_N.xlsx')",
-    "max_results": "Maximum number of emails to retrieve (optional, defaults to 100)"
+    "max_results": "Maximum number of emails to retrieve (optional, defaults to 100)",
+    "analyze_repos": "Optional: Analyze GitHub repositories from one of the output files",
+    "input_file": "Excel file containing GitHub URLs to analyze (required for analyze_repos)",
+    "output_file": "Output file for analysis results (optional, defaults to 'Output_23.xlsx')",
+    "temp_dir": "Directory for cloning repositories (optional, defaults to 'TempFiles')",
+    "cleanup": "Remove cloned repos after analysis (optional, defaults to true)"
   }
 }

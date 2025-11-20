@@ -10,6 +10,10 @@ token.pickle
 *_report.json
 pipeline_report.json
 
+# Temporary repository clones
+TempFiles/
+MyRepos/
+
 # Python
 __pycache__/
 *.py[cod]

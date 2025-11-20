@@ -1,0 +1,48 @@
+Gmail Agent System - Project Structure
+========================================
+
+Main Scripts:
+-------------
+├── gmail_agent.py        - Retrieve emails and extract GitHub URLs
+├── analyze_repos.py      - Clone repos and analyze code metrics
+└── pipeline.py           - Integrated workflow (both agents)
+
+Configuration:
+--------------
+├── config.json           - Active pipeline configuration
+├── config.json.example   - Configuration template with examples
+├── credentials.json      - OAuth 2.0 credentials (user-created)
+└── requirements.txt      - Python dependencies
+
+Documentation:
+--------------
+├── README.md             - Complete system documentation
+├── ANALYZE_REPOS_README.md - Repository analysis details
+└── QUICK_START.md        - Quick start guide
+
+Generated Files:
+----------------
+├── token.pickle          - Saved authentication token
+├── Output_12.xlsx        - Gmail search results
+├── Output_23.xlsx        - Repository analysis results
+└── TempFiles/            - Temporary cloned repositories
+
+Workflow:
+---------
+1. Gmail Agent retrieves emails → Output_12.xlsx
+   - Columns: ID, TimeStamp, Subject, Search Criteria, github Repo URL
+
+2. Analyze Repos clones & analyzes → Output_23.xlsx  
+   - Additional columns: Total Lines, Lines in Small Files, Grade
+
+Complete Pipeline:
+------------------
+python pipeline.py --config config.json
+
+This runs both agents automatically:
+  ✓ Retrieve emails from Gmail
+  ✓ Extract GitHub URLs from email bodies
+  ✓ Clone repositories in parallel (async)
+  ✓ Analyze code metrics
+  ✓ Generate two Excel reports
+  ✓ Clean up temporary files

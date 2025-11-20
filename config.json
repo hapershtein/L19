@@ -4,8 +4,14 @@
     {
       "name": "Email Testing Label",
       "query": "label:EmailTesting",
-      "output": "email_Testing.xlsx",
+      "output": "Output_12.xlsx",
       "max_results": 50
     }
-  ]
+  ],
+  "analyze_repos": {
+    "input_file": "Output_12.xlsx",
+    "output_file": "Output_23.xlsx",
+    "temp_dir": "TempFiles",
+    "cleanup": true
+  }
 }
