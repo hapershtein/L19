@@ -5,7 +5,10 @@ Main Scripts:
 -------------
 ├── gmail_agent.py        - Retrieve emails and extract GitHub URLs
 ├── analyze_repos.py      - Clone repos and analyze code metrics
-└── pipeline.py           - Integrated workflow (both agents)
+├── message_writer.py     - Generate personalized feedback messages
+├── email_drafter.py      - Create Gmail draft messages from feedback
+├── pipeline.py           - Integrated workflow (all agents)
+└── logger_config.py      - Centralized logging configuration
 
 Configuration:
 --------------
@@ -16,15 +19,36 @@ Configuration:
 
 Documentation:
 --------------
-├── README.md             - Complete system documentation
-├── ANALYZE_REPOS_README.md - Repository analysis details
-└── QUICK_START.md        - Quick start guide
+├── README.md                - Complete system documentation
+├── ANALYZE_REPOS_README.md  - Repository analysis details
+├── MESSAGE_WRITER_README.md - Message writer details
+├── EMAIL_DRAFTER_README.md  - Email drafter details
+├── LOGGING_README.md        - Logging system documentation
+├── QUICK_START.md           - Quick start guide
+├── PROMPTS.md               - Development history
+└── PROJECT_STRUCTURE.txt    - This file
+
+Communication Styles:
+---------------------
+└── Skills/
+    ├── donald_trump.md      - Trump writing style
+    ├── benjamin_netanyahu.md - Netanyahu writing style
+    ├── shahar_hason.md      - Hason writing style
+    └── dudi_amsalem.md      - Amsalem writing style
 
 Generated Files:
 ----------------
 ├── token.pickle          - Saved authentication token
 ├── Output_12.xlsx        - Gmail search results
 ├── Output_23.xlsx        - Repository analysis results
+├── Output_34.xlsx        - Analysis with feedback messages
+├── Gmail Drafts          - Draft messages in Gmail Drafts folder
+├── Logs/                 - Rotating log files for all agents
+│   ├── gmail_agent.log   - Email retrieval logs
+│   ├── analyze_repos.log - Repository analysis logs
+│   ├── message_writer.log - Message generation logs
+│   ├── email_drafter.log - Draft creation logs
+│   └── pipeline_execution.log - Complete pipeline logs
 └── TempFiles/            - Temporary cloned repositories
 
 Workflow:
@@ -32,17 +56,33 @@ Workflow:
 1. Gmail Agent retrieves emails → Output_12.xlsx
    - Columns: ID, TimeStamp, Subject, Search Criteria, github Repo URL
 
-2. Analyze Repos clones & analyzes → Output_23.xlsx  
-   - Additional columns: Total Lines, Lines in Small Files, Grade
+2. Analyze Repos clones & analyzes → Output_23.xlsx
+   - Additional columns: Total Lines, Lines in Small Files, Grade (%)
+
+3. Message Writer generates feedback → Output_34.xlsx
+   - Additional column: Feedback Message
+   - Trump style (90-100%): Enthusiastic congratulations
+   - Netanyahu style (70-89%): Professional feedback
+   - Hason style (50-69%): Humorous encouragement
+   - Amsalem style (<50%): Brutally honest critique
+
+4. Email Drafter creates Gmail drafts
+   - Reads feedback from Output_34.xlsx
+   - Creates draft for each feedback message
+   - Subject: "Feedback message to [ID]"
+   - Body: Complete feedback message
+   - Stored in Gmail Drafts folder
 
 Complete Pipeline:
 ------------------
 python pipeline.py --config config.json
 
-This runs both agents automatically:
+This runs all four agents automatically:
   ✓ Retrieve emails from Gmail
   ✓ Extract GitHub URLs from email bodies
   ✓ Clone repositories in parallel (async)
   ✓ Analyze code metrics
-  ✓ Generate two Excel reports
+  ✓ Generate personalized feedback messages
+  ✓ Create Gmail draft messages
+  ✓ Generate three Excel reports + Gmail drafts
   ✓ Clean up temporary files

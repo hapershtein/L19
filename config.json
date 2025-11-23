@@ -12,6 +12,15 @@
     "input_file": "Output_12.xlsx",
     "output_file": "Output_23.xlsx",
     "temp_dir": "TempFiles",
-    "cleanup": true
+    "cleanup": true,
+    "small_file_threshold": 200140
+  },
+  "generate_messages": {
+    "input_file": "Output_23.xlsx",
+    "output_file": "Output_34.xlsx"
+  },
+  "draft_emails": {
+    "input_file": "Output_34.xlsx",
+    "credentials_file": "credentials.json"
   }
 }

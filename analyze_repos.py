@@ -10,12 +10,16 @@ import shutil
 from pathlib import Path
 from openpyxl import load_workbook, Workbook
 from openpyxl.styles import Font, Alignment, PatternFill
+from logger_config import LoggerConfig
+
+# Setup logger
+logger = LoggerConfig.setup_logger('analyze_repos')
 
 
 class RepoAnalyzer:
     """Agent to clone and analyze GitHub repositories"""
 
-    def __init__(self, input_file, output_file='Output_23.xlsx', temp_dir='TempFiles'):
+    def __init__(self, input_file, output_file='Output_23.xlsx', temp_dir='TempFiles', small_file_threshold=150):
         """
         Initialize the Repo Analyzer
 
@@ -23,10 +27,12 @@ class RepoAnalyzer:
             input_file: Path to input Excel file with GitHub URLs
             output_file: Path to output Excel file
             temp_dir: Directory to store cloned repositories
+            small_file_threshold: Maximum line count for a file to be considered "small" (default: 150)
         """
         self.input_file = input_file
         self.output_file = output_file
         self.temp_dir = temp_dir
+        self.small_file_threshold = small_file_threshold
         self.repos_data = []
         self.semaphore = asyncio.Semaphore(5)  # Limit concurrent clones to 5
 
@@ -184,14 +190,14 @@ class RepoAnalyzer:
                     total_lines += line_count
                     file_count += 1
 
-                    # Check if file has less than 150 lines
-                    if line_count < 150:
+                    # Check if file has less than threshold lines
+                    if line_count < self.small_file_threshold:
                         small_files_lines += line_count
                         small_file_count += 1
 
-        # Calculate grade
-        if small_files_lines > 0:
-            grade = total_lines / small_files_lines
+        # Calculate grade (percentage of code in small files)
+        if total_lines > 0:
+            grade = (small_files_lines / total_lines) * 100
         else:
             grade = 0.0
 
@@ -201,8 +207,8 @@ class RepoAnalyzer:
         repo_data['status'] = 'analyzed'
 
         print(f"[{repo_id}] ✓ Analysis complete: {total_lines} total lines, "
-              f"{small_files_lines} lines in small files (<150 lines), "
-              f"Grade: {repo_data['grade']}")
+              f"{small_files_lines} lines in small files (<{self.small_file_threshold} lines), "
+              f"Grade: {repo_data['grade']}%")
 
         return repo_data
 
@@ -266,8 +272,8 @@ class RepoAnalyzer:
             'Search Criteria',
             'github Repo URL',
             'Total Lines',
-            'Lines in Small Files (<150)',
-            'Grade'
+            f'Lines in Small Files (<{self.small_file_threshold})',
+            'Grade (%)'
         ]
         ws.append(headers)
 
@@ -427,13 +433,21 @@ Example:
         help='Keep cloned repositories after analysis (default: cleanup)'
     )
 
+    parser.add_argument(
+        '--small-file-threshold',
+        type=int,
+        default=150,
+        help='Maximum line count for a file to be considered "small" (default: 150)'
+    )
+
     args = parser.parse_args()
 
     # Create and run analyzer
     analyzer = RepoAnalyzer(
         input_file=args.input,
         output_file=args.output,
-        temp_dir=args.temp_dir
+        temp_dir=args.temp_dir,
+        small_file_threshold=args.small_file_threshold
     )
 
     await analyzer.run(cleanup=not args.no_cleanup)

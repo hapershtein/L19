@@ -5,6 +5,7 @@ token.pickle
 # Output files
 *.xlsx
 *.xls
+Output_*.xlsx
 
 # Pipeline reports
 *_report.json
@@ -13,6 +14,10 @@ pipeline_report.json
 # Temporary repository clones
 TempFiles/
 MyRepos/
+
+# Logs
+Logs/
+*.log
 
 # Python
 __pycache__/

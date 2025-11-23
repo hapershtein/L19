@@ -9,7 +9,7 @@ A Python agent that reads GitHub repository URLs from an Excel file, clones them
 - Analyzes code metrics:
   - Total lines of code across entire repository
   - Lines of code in small files (< 150 lines)
-  - Grade calculation (total lines / small files lines)
+  - Grade calculation (percentage of code in small files)
 - Exports results to Excel with formatted output
 - Progress tracking and detailed status reporting
 - Automatic cleanup of temporary files
@@ -50,6 +50,7 @@ This will:
 - `--output`: Output Excel file path (default: `Output_23.xlsx`)
 - `--temp-dir`: Directory for cloned repos (default: `TempFiles`)
 - `--no-cleanup`: Keep cloned repositories after analysis
+- `--small-file-threshold`: Maximum line count for "small" files (default: `150`)
 
 ### Examples
 
@@ -69,6 +70,13 @@ python analyze_repos.py --input Output_12.xlsx --no-cleanup
 
 ```bash
 python analyze_repos.py --input Output_12.xlsx --temp-dir MyRepos
+```
+
+#### Use custom small file threshold
+
+```bash
+# Consider files under 200 lines as "small" instead of 150
+python analyze_repos.py --input Output_12.xlsx --small-file-threshold 200
 ```
 
 ## Input File Format
@@ -97,14 +105,15 @@ The output Excel file contains all input columns plus three new analysis columns
 5. **github Repo URL** - Original GitHub URL
 6. **Total Lines** - Total lines of code in entire repository
 7. **Lines in Small Files (<150)** - Lines in files with fewer than 150 lines
-8. **Grade** - Calculated as: Total Lines ÷ Lines in Small Files
+8. **Grade (%)** - Percentage of total code that is in small files: (Small Files Lines ÷ Total Lines) × 100
 
 ### Grade Interpretation
 
-- **Higher grade** = More code in larger files (more complex/consolidated codebase)
-- **Lower grade** = More code distributed in small files (more modular codebase)
-- **Grade of 1.0** = All code is in small files
-- **Grade > 2.0** = Significant amount of code in larger files
+- **Higher grade (closer to 100%)** = More code in small files (more modular codebase)
+- **Lower grade (closer to 0%)** = More code in larger files (more complex/consolidated codebase)
+- **Grade of 100%** = All code is in small files
+- **Grade < 50%** = Majority of code is in larger files
+- **Grade > 70%** = Highly modular codebase with small, focused files
 
 ## How It Works
 
@@ -139,8 +148,8 @@ For each cloned repository:
 - Walks through all files (excluding `.git` directory)
 - Counts lines in each file
 - Tracks total lines across all files
-- Tracks lines in files with < 150 lines
-- Calculates grade metric
+- Tracks lines in files with < threshold lines
+- Calculates grade as percentage: (small files lines / total lines) × 100
 
 ### 4. Output Generation
 
@@ -169,10 +178,10 @@ Starting parallel repository cloning
 [12347] Cloning https://github.com/user/repo3...
 [12345] ✓ Clone successful
 [12345] Analyzing code...
-[12345] ✓ Analysis complete: 5,234 total lines, 1,876 lines in small files (<150 lines), Grade: 2.79
+[12345] ✓ Analysis complete: 5,234 total lines, 1,876 lines in small files (<150 lines), Grade: 35.85%
 [12346] ✓ Clone successful
 [12346] Analyzing code...
-[12346] ✓ Analysis complete: 3,421 total lines, 2,105 lines in small files (<150 lines), Grade: 1.63
+[12346] ✓ Analysis complete: 3,421 total lines, 2,105 lines in small files (<150 lines), Grade: 61.53%
 
 ...
 
@@ -256,10 +265,20 @@ self.semaphore = asyncio.Semaphore(10)  # Increase to 10 concurrent clones
 
 ### Change "Small File" Threshold
 
-Edit `analyze_repos.py` line 188:
+Use the `--small-file-threshold` command-line option:
 
-```python
-if line_count < 200:  # Change from 150 to 200
+```bash
+python analyze_repos.py --input Output_12.xlsx --small-file-threshold 200
+```
+
+Or in the pipeline configuration (config.json):
+
+```json
+"analyze_repos": {
+  "input_file": "Output_12.xlsx",
+  "output_file": "Output_23.xlsx",
+  "small_file_threshold": 200
+}
 ```
 
 ### Include Specific File Types Only

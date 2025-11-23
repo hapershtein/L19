@@ -16,9 +16,13 @@ from googleapiclient.errors import HttpError
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill
 from dateutil import parser as date_parser
+from logger_config import LoggerConfig
 
 # Gmail API scopes
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
+
+# Setup logger
+logger = LoggerConfig.setup_logger('gmail_agent')
 
 
 class GmailAgent:
@@ -37,25 +41,32 @@ class GmailAgent:
 
     def authenticate(self):
         """Authenticate with Gmail API using OAuth 2.0"""
+        logger.info("Starting Gmail API authentication")
         creds = None
 
         # Check if token.pickle exists (stores user's access and refresh tokens)
         if os.path.exists(self.token_file):
+            logger.debug(f"Loading existing token from {self.token_file}")
             with open(self.token_file, 'rb') as token:
                 creds = pickle.load(token)
+            logger.info("Loaded existing authentication token")
 
         # If there are no valid credentials, let the user log in
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
+                logger.info("Token expired, refreshing access token")
                 print("Refreshing access token...")
                 creds.refresh(Request())
+                logger.info("Access token refreshed successfully")
             else:
                 if not os.path.exists(self.credentials_file):
+                    logger.error(f"Credentials file not found: {self.credentials_file}")
                     raise FileNotFoundError(
                         f"Credentials file '{self.credentials_file}' not found. "
                         "Please download it from Google Cloud Console."
                     )
 
+                logger.info("Starting OAuth 2.0 authentication flow")
                 print("Starting OAuth 2.0 authentication flow...")
                 flow = InstalledAppFlow.from_client_secrets_file(
                     self.credentials_file, SCOPES
@@ -63,18 +74,26 @@ class GmailAgent:
 
                 # Try to run local server with browser, fallback to console if it fails
                 try:
+                    logger.debug("Attempting browser authentication")
                     creds = flow.run_local_server(port=0, open_browser=True)
+                    logger.info("Browser authentication successful")
                 except Exception as e:
+                    logger.warning(f"Browser authentication failed: {e}")
+                    logger.info("Falling back to console authentication")
                     print(f"\nCouldn't open browser automatically: {e}")
                     print("\nUsing console authentication flow instead...")
                     print("You'll receive a URL to visit in your browser.\n")
                     creds = flow.run_console()
+                    logger.info("Console authentication successful")
 
             # Save the credentials for the next run
+            logger.debug(f"Saving credentials to {self.token_file}")
             with open(self.token_file, 'wb') as token:
                 pickle.dump(creds, token)
+            logger.info("Credentials saved for future use")
 
         self.service = build('gmail', 'v1', credentials=creds)
+        logger.info("Gmail API service built successfully")
         print("Successfully authenticated with Gmail API")
 
     def extract_first_url(self, text):
@@ -144,11 +163,15 @@ class GmailAgent:
         Returns:
             List of email data dictionaries
         """
+        logger.info(f"Starting email search with query: '{query}', max_results: {max_results}")
+
         if not self.service:
+            logger.error("Gmail service not initialized - authentication required")
             raise RuntimeError("Not authenticated. Call authenticate() first.")
 
         try:
             print(f"Searching for emails with query: '{query}'")
+            logger.debug(f"Calling Gmail API messages().list() with userId='me', query='{query}'")
             results = self.service.users().messages().list(
                 userId='me',
                 q=query,
@@ -156,16 +179,20 @@ class GmailAgent:
             ).execute()
 
             messages = results.get('messages', [])
+            logger.info(f"API returned {len(messages)} message IDs")
 
             if not messages:
+                logger.info("No messages found matching query")
                 print("No messages found.")
                 return []
 
             print(f"Found {len(messages)} messages. Retrieving details...")
+            logger.info(f"Starting to retrieve full details for {len(messages)} messages")
 
             email_data = []
             for i, message in enumerate(messages, 1):
                 msg_id = message['id']
+                logger.debug(f"Processing message {i}/{len(messages)}, ID: {msg_id}")
 
                 # Get full message details (including body for URL extraction)
                 msg = self.service.users().messages().get(
@@ -179,17 +206,23 @@ class GmailAgent:
                 subject = next((h['value'] for h in headers if h['name'] == 'Subject'), 'No Subject')
                 date_str = next((h['value'] for h in headers if h['name'] == 'Date'), '')
                 from_email = next((h['value'] for h in headers if h['name'] == 'From'), '')
+                logger.debug(f"Message {i}: Subject='{subject[:50]}...', From='{from_email}'")
 
                 # Parse date
                 try:
                     date_obj = date_parser.parse(date_str)
                     timestamp = date_obj.strftime('%Y-%m-%d %H:%M:%S')
-                except:
+                except Exception as e:
+                    logger.warning(f"Failed to parse date '{date_str}': {e}")
                     timestamp = date_str
 
                 # Extract body and find first URL
                 body = self.get_message_body(msg['payload'])
                 repo_url = self.extract_first_url(body)
+                if repo_url:
+                    logger.debug(f"Message {i}: Extracted URL: {repo_url}")
+                else:
+                    logger.debug(f"Message {i}: No URL found in body")
 
                 email_data.append({
                     'id': msg_id,
@@ -202,12 +235,20 @@ class GmailAgent:
 
                 if i % 10 == 0:
                     print(f"  Retrieved {i}/{len(messages)} messages...")
+                    logger.info(f"Progress: Retrieved {i}/{len(messages)} messages")
 
+            logger.info(f"Successfully retrieved all {len(email_data)} emails")
             print(f"Successfully retrieved {len(email_data)} emails")
             return email_data
 
         except HttpError as error:
+            logger.error(f"Gmail API HttpError: {error}")
+            LoggerConfig.log_exception(logger, error, "search_emails")
             print(f"An error occurred: {error}")
+            return []
+        except Exception as error:
+            logger.error(f"Unexpected error in search_emails: {error}")
+            LoggerConfig.log_exception(logger, error, "search_emails")
             return []
 
     def export_to_excel(self, email_data, output_file='gmail_export.xlsx'):
@@ -218,10 +259,14 @@ class GmailAgent:
             email_data: List of email data dictionaries
             output_file: Output Excel file path
         """
+        logger.info(f"Starting Excel export to {output_file}")
+
         if not email_data:
+            logger.warning("No email data to export")
             print("No data to export.")
             return
 
+        logger.info(f"Exporting {len(email_data)} emails to {output_file}")
         print(f"Exporting {len(email_data)} emails to {output_file}...")
 
         # Create workbook and select active sheet
@@ -260,7 +305,9 @@ class GmailAgent:
         ws.column_dimensions['E'].width = 60  # Repo URL
 
         # Save the workbook
+        logger.debug(f"Saving workbook to {output_file}")
         wb.save(output_file)
+        logger.info(f"Successfully exported {len(email_data)} emails to {output_file}")
         print(f"Successfully exported to {output_file}")
 
 
@@ -317,6 +364,12 @@ Examples:
 
     # Create and run the agent
     try:
+        session_id = LoggerConfig.get_session_id()
+        logger.info(f"{'='*70}")
+        logger.info(f"Gmail Agent session started - Session ID: {session_id}")
+        logger.info(f"Parameters: query='{args.query}', max={args.max}, output='{args.output}'")
+        logger.info(f"{'='*70}")
+
         agent = GmailAgent(credentials_file=args.credentials)
         agent.authenticate()
 
@@ -326,14 +379,19 @@ Examples:
         # Export to Excel
         if emails:
             agent.export_to_excel(emails, output_file=args.output)
+            logger.info(f"Session completed successfully - {len(emails)} emails exported")
             print(f"\n✓ Complete! {len(emails)} emails exported to {args.output}")
         else:
+            logger.info("Session completed - No emails found")
             print("\nNo emails found matching the search criteria.")
 
     except FileNotFoundError as e:
+        logger.error(f"FileNotFoundError: {e}")
         print(f"\nError: {e}")
         print("\nPlease follow the setup instructions in README.md")
     except Exception as e:
+        logger.error(f"Unexpected error in main: {e}")
+        LoggerConfig.log_exception(logger, e, "main function")
         print(f"\nAn error occurred: {e}")
         import traceback
         traceback.print_exc()

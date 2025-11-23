@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(python analyze_repos.py:*)",
+      "Bash(python3:*)"
     ],
     "deny": [],
     "ask": []

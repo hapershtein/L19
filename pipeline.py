@@ -9,7 +9,15 @@ import argparse
 import asyncio
 from datetime import datetime
 from gmail_agent import GmailAgent
+
+from logger_config import LoggerConfig
+
+# Setup logger
+logger = LoggerConfig.setup_logger('pipeline')
+
 from analyze_repos import RepoAnalyzer
+from message_writer import MessageWriter
+from email_drafter import EmailDrafter
 
 
 class GmailPipeline:
@@ -246,6 +254,7 @@ class GmailPipeline:
         output_file = analyze_config.get('output_file', 'Output_23.xlsx')
         temp_dir = analyze_config.get('temp_dir', 'TempFiles')
         cleanup = analyze_config.get('cleanup', True)
+        small_file_threshold = analyze_config.get('small_file_threshold', 150)
 
         if not input_file:
             print("Error: 'input_file' not specified in analyze_repos configuration")
@@ -259,7 +268,8 @@ class GmailPipeline:
             analyzer = RepoAnalyzer(
                 input_file=input_file,
                 output_file=output_file,
-                temp_dir=temp_dir
+                temp_dir=temp_dir,
+                small_file_threshold=small_file_threshold
             )
 
             results = await analyzer.run(cleanup=cleanup)
@@ -267,6 +277,86 @@ class GmailPipeline:
 
         except Exception as e:
             print(f"Error during repository analysis: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+
+    def generate_messages(self, message_config):
+        """
+        Run message generation on analyzed repositories
+
+        Args:
+            message_config: Configuration for message generation
+
+        Returns:
+            Message generation results
+        """
+        print(f"\n{'='*70}")
+        print(f"Starting Message Generation")
+        print(f"{'='*70}\n")
+
+        input_file = message_config.get('input_file')
+        output_file = message_config.get('output_file', 'Output_34.xlsx')
+
+        if not input_file:
+            print("Error: 'input_file' not specified in generate_messages configuration")
+            return None
+
+        if not os.path.exists(input_file):
+            print(f"Warning: Input file '{input_file}' not found. Skipping message generation.")
+            return None
+
+        try:
+            writer = MessageWriter(
+                input_file=input_file,
+                output_file=output_file
+            )
+
+            results = writer.run()
+            return results
+
+        except Exception as e:
+            print(f"Error during message generation: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+
+    def draft_emails(self, draft_config):
+        """
+        Create Gmail draft messages from feedback
+
+        Args:
+            draft_config: Configuration for email drafting
+
+        Returns:
+            Draft creation results
+        """
+        print(f"\n{'='*70}")
+        print(f"Starting Email Draft Creation")
+        print(f"{'='*70}\n")
+
+        input_file = draft_config.get('input_file')
+        credentials_file = draft_config.get('credentials_file', 'credentials.json')
+
+        if not input_file:
+            print("Error: 'input_file' not specified in draft_emails configuration")
+            return None
+
+        if not os.path.exists(input_file):
+            print(f"Warning: Input file '{input_file}' not found. Skipping email drafting.")
+            return None
+
+        try:
+            drafter = EmailDrafter(
+                input_file=input_file,
+                credentials_file=credentials_file
+            )
+
+            results = drafter.run()
+            return results
+
+        except Exception as e:
+            print(f"Error during email drafting: {e}")
             import traceback
             traceback.print_exc()
             return None
@@ -286,6 +376,14 @@ async def async_main(args):
         # Run repository analysis if configured
         if pipeline.config and 'analyze_repos' in pipeline.config:
             await pipeline.analyze_repositories(pipeline.config['analyze_repos'])
+
+        # Run message generation if configured
+        if pipeline.config and 'generate_messages' in pipeline.config:
+            pipeline.generate_messages(pipeline.config['generate_messages'])
+
+        # Create email drafts if configured
+        if pipeline.config and 'draft_emails' in pipeline.config:
+            pipeline.draft_emails(pipeline.config['draft_emails'])
 
         # Exit with appropriate code
         failed = sum(1 for r in pipeline.results if r['status'] == 'error')

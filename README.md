@@ -14,10 +14,34 @@ A Python agent system that connects to Gmail, retrieves emails based on search c
 
 **Analyze Repos Agent:**
 - Async parallel repository cloning (up to 5 concurrent)
-- Code metrics analysis (total lines, small files, grade calculation)
+- Code metrics analysis (total lines, small files, modularity grade)
 - Automatic cleanup of temporary files
 - Progress tracking and error handling
 - Integrates seamlessly with Gmail Agent pipeline
+
+**Message Writer Agent:**
+- Generates personalized feedback messages based on modularity grades
+- Four distinctive communication styles based on grade ranges
+- Trump style (90-100%): Congratulatory and enthusiastic
+- Netanyahu style (70-89%): Professional and evidence-based
+- Shahar Hason style (50-69%): Humorous and encouraging
+- Dudi Amsalem style (<50%): Brutally honest and direct
+- Exports enhanced Excel with feedback column
+
+**Email Drafter Agent:**
+- Creates Gmail draft messages from feedback messages
+- Automatic subject line generation: "Feedback message to [ID]"
+- OAuth 2.0 authentication with Gmail API
+- Batch processing of multiple feedback messages
+- Drafts stored in Gmail Drafts folder for review before sending
+- Integrates seamlessly with complete pipeline
+
+## Features Summary
+
+- **Comprehensive Logging**: All operations logged to rotating files in `Logs/` folder
+- **Automatic Log Rotation**: 10MB per file, 5 backups, prevents disk space issues
+- **Detailed Error Tracking**: Full exception traces for debugging
+- **Session Tracking**: Unique session IDs for each execution
 
 ## Requirements
 
@@ -315,7 +339,7 @@ The report contains detailed execution results:
 
 #### Integrated Workflow Example
 
-Here's a complete workflow that retrieves emails and analyzes repositories:
+Here's a complete workflow that retrieves emails, analyzes repositories, generates personalized feedback, and creates draft emails:
 
 ```json
 {
@@ -333,6 +357,14 @@ Here's a complete workflow that retrieves emails and analyzes repositories:
     "output_file": "graded_repos.xlsx",
     "temp_dir": "TempFiles",
     "cleanup": true
+  },
+  "generate_messages": {
+    "input_file": "graded_repos.xlsx",
+    "output_file": "feedback_repos.xlsx"
+  },
+  "draft_emails": {
+    "input_file": "feedback_repos.xlsx",
+    "credentials_file": "credentials.json"
   }
 }
 ```
@@ -345,9 +377,24 @@ When you run this configuration:
 4. **Analyze Repos Agent** automatically:
    - Clones each repository (parallel, up to 5 at once)
    - Counts total lines and lines in small files (<150 lines)
-   - Calculates grade metric
-   - Exports to `graded_repos.xlsx` with additional columns: Total Lines, Lines in Small Files, Grade
-5. Cleans up temporary files
+   - Calculates modularity grade (percentage of code in small files)
+   - Exports to `graded_repos.xlsx` with additional columns: Total Lines, Lines in Small Files, Grade (%)
+5. **Message Writer Agent** automatically:
+   - Reads grades from analysis results
+   - Generates personalized feedback based on grade:
+     - 90-100%: Enthusiastic congratulations (Trump style)
+     - 70-89%: Professional positive feedback (Netanyahu style)
+     - 50-69%: Encouraging improvement message (Shahar Hason style)
+     - Below 50%: Brutally honest critique (Dudi Amsalem style)
+   - Exports to `feedback_repos.xlsx` with new "Feedback Message" column
+6. **Email Drafter Agent** automatically:
+   - Reads feedback messages from Excel
+   - Authenticates with Gmail API
+   - Creates draft messages in Gmail Drafts folder
+   - Subject: "Feedback message to [ID]"
+   - Body: Complete feedback message
+   - Drafts ready for review and sending
+7. Cleans up temporary files
 
 **Output:**
 
@@ -365,13 +412,55 @@ Starting Repository Analysis
 [12346] Cloning https://github.com/student2/project...
 [12345] ✓ Clone successful
 [12345] Analyzing code...
-[12345] ✓ Analysis complete: 3,421 total lines, 1,876 lines in small files, Grade: 1.82
+[12345] ✓ Analysis complete: 3,421 total lines, 1,876 lines in small files, Grade: 54.84%
 
 Analysis Summary
 Total Repositories: 15
 Successfully Analyzed: 14
 Clone Failed: 1
 Average Lines per Repo: 4,123
+
+Starting Message Generation
+──────────────────────────────────────────────────────────────────────
+Reading data from graded_repos.xlsx...
+Found 14 repositories to process
+
+[1/14] 12345 - Grade: 95.30% - Style: Trump (Congratulations)
+[2/14] 12346 - Grade: 78.50% - Style: Netanyahu (Positive)
+[3/14] 12347 - Grade: 62.10% - Style: Hason (Improvement)
+[4/14] 12348 - Grade: 42.80% - Style: Amsalem (Brutally Honest)
+...
+
+✓ Generated 14 personalized messages
+✓ Successfully exported to feedback_repos.xlsx
+
+Message Generation Summary
+Total Repositories: 14
+Messages by Style:
+  Trump (90-100%):     2 - Congratulations
+  Netanyahu (70-89%):  5 - Positive Feedback
+  Hason (50-69%):      4 - Needs Improvement
+  Amsalem (<50%):      3 - Brutally Honest
+
+Starting Email Draft Creation
+──────────────────────────────────────────────────────────────────────
+✓ Successfully authenticated with Gmail API
+
+Reading data from feedback_repos.xlsx...
+Found 14 feedback messages to draft
+
+[1/14] Creating draft for ID: 12345
+  ✓ Draft created successfully (ID: r-1234567890)
+[2/14] Creating draft for ID: 12346
+  ✓ Draft created successfully (ID: r-1234567891)
+...
+
+Draft Creation Summary
+Total Feedback Messages: 14
+Drafts Created: 14
+Failed: 0
+
+✓ Drafts are available in your Gmail account under 'Drafts' folder
 ```
 
 ## First Run
@@ -398,19 +487,39 @@ The token is saved locally and will be reused on subsequent runs, so you won't n
 
 ## Output Format
 
+### Gmail Agent Output (e.g., Output_12.xlsx)
+
 The Excel file contains the following columns:
 
 1. **ID** - Unique Gmail message ID
 2. **TimeStamp** - Date and time the email was received
 3. **Subject** - Email subject line
 4. **Search Criteria** - The search query used to retrieve this email
-5. **Repo URL** - The first URL found in the email body (useful for tracking links to repositories, documents, or resources)
+5. **github Repo URL** - GitHub repository URLs extracted from email body
 
-The Excel file includes:
+### Repository Analysis Output (e.g., Output_23.xlsx)
+
+Includes all Gmail Agent columns plus:
+
+6. **Total Lines** - Total lines of code in the repository
+7. **Lines in Small Files (<150)** - Lines in files below threshold
+8. **Grade (%)** - Modularity percentage (higher = more modular)
+
+### Message Writer Output (e.g., Output_34.xlsx)
+
+Includes all Repository Analysis columns plus:
+
+9. **Feedback Message** - Personalized feedback based on grade:
+   - 90-100%: Trump-style congratulations
+   - 70-89%: Netanyahu-style positive feedback
+   - 50-69%: Shahar Hason-style improvement guidance
+   - Below 50%: Dudi Amsalem-style brutally honest critique
+
+All Excel files include:
 - Formatted headers with blue background
 - Auto-adjusted column widths
 - Professional styling
-- Automatic URL extraction from email body content
+- Text wrapping for long messages
 
 ## Troubleshooting
 
@@ -449,9 +558,11 @@ This occurs when running in WSL or a headless environment where the browser can'
 
 No additional configuration is needed - the fallback happens automatically.
 
-## Standalone Repository Analysis
+## Standalone Agent Usage
 
-You can also run the repository analysis agent independently, without the Gmail pipeline:
+You can also run the agents independently, without the full pipeline:
+
+### Standalone Repository Analysis
 
 ```bash
 # Analyze repos from any Excel file with GitHub URLs
@@ -470,15 +581,86 @@ The input Excel file must have a column named "github Repo URL" containing GitHu
 - All original columns from input file
 - **Total Lines** - Total lines of code in entire repository
 - **Lines in Small Files (<150)** - Lines in files with fewer than 150 lines
-- **Grade** - Ratio of total lines to small files lines (higher = more complex/consolidated code)
+- **Grade (%)** - Percentage of code in small files (higher = more modular codebase)
 
 See `ANALYZE_REPOS_README.md` for detailed documentation on the repository analysis agent.
+
+### Standalone Message Writer
+
+```bash
+# Generate feedback messages from analyzed repos
+python message_writer.py --input Output_23.xlsx --output feedback.xlsx
+
+# Use custom input/output files
+python message_writer.py --input student_analysis.xlsx --output student_feedback.xlsx
+```
+
+The input Excel file must have a "Grade (%)" column with modularity percentages.
+
+**Output includes:**
+- All original columns from input file
+- **Feedback Message** - Personalized feedback based on grade (Trump/Netanyahu/Hason/Amsalem styles)
+
+See `MESSAGE_WRITER_README.md` for detailed documentation on the message writer agent.
+
+### Standalone Email Drafter
+
+```bash
+# Create Gmail drafts from feedback messages
+python email_drafter.py --input Output_34.xlsx
+
+# Use custom input file
+python email_drafter.py --input student_feedback.xlsx
+
+# Use custom credentials
+python email_drafter.py --input feedback.xlsx --credentials my_creds.json
+```
+
+The input Excel file must have "ID" and "Feedback Message" columns.
+
+**Creates:**
+- Gmail draft messages in your Drafts folder
+- Subject: "Feedback message to [ID]"
+- Body: Complete feedback message
+- Ready for review and sending
+
+See `EMAIL_DRAFTER_README.md` for detailed documentation on the email drafter agent.
+
+## Logging
+
+All agents include comprehensive logging to help with debugging and monitoring:
+
+- **Log Location**: `Logs/` directory
+- **Log Files**:
+  - `gmail_agent.log` - Email retrieval operations
+  - `analyze_repos.log` - Repository analysis
+  - `message_writer.log` - Message generation
+  - `email_drafter.log` - Draft creation
+  - `pipeline_execution.log` - Complete pipeline runs
+- **Rotation**: Automatic rotation at 10MB, keeps 5 backups
+- **Format**: Timestamped with module, level, and detailed context
+
+See `LOGGING_README.md` for complete logging documentation.
+
+### View Logs
+
+```bash
+# View recent logs
+tail -n 50 Logs/gmail_agent.log
+
+# Follow pipeline execution in real-time
+tail -f Logs/pipeline_execution.log
+
+# Search for errors
+grep "ERROR" Logs/*.log
+```
 
 ## Security Notes
 
 - **Keep `credentials.json` secure** - This file contains your OAuth client credentials
 - **Keep `token.pickle` secure** - This file contains your access token
 - **Never commit these files to version control** - Add them to `.gitignore`
+- **Log files may contain IDs and URLs** - Treat log files as sensitive
 - The agent only requests **read-only** access to your Gmail
 
 ## Adding to .gitignore
@@ -489,6 +671,8 @@ Create a `.gitignore` file to prevent sensitive files from being committed:
 credentials.json
 token.pickle
 *.xlsx
+Logs/
+*.log
 __pycache__/
 *.pyc
 ```

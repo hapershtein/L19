@@ -12,13 +12,17 @@ This will:
 1. Retrieve emails from Gmail matching your search criteria
 2. Extract GitHub URLs from email bodies
 3. Clone all repositories in parallel
-4. Analyze code metrics (lines, small files, grade)
-5. Generate two Excel reports
+4. Analyze code metrics (lines, small files, modularity percentage)
+5. Generate personalized feedback messages based on grades
+6. Create Gmail draft messages from feedback
+7. Generate three Excel reports + Gmail drafts
 
 ## Files Generated
 
 - `Output_12.xlsx` - Gmail search results with GitHub URLs
 - `Output_23.xlsx` - Repository analysis with code metrics
+- `Output_34.xlsx` - Analysis with personalized feedback messages
+- Gmail Drafts - Draft emails in your Gmail Drafts folder
 
 ## Configuration Example
 
@@ -40,6 +44,14 @@ Edit `config.json`:
     "output_file": "Output_23.xlsx",
     "temp_dir": "TempFiles",
     "cleanup": true
+  },
+  "generate_messages": {
+    "input_file": "Output_23.xlsx",
+    "output_file": "Output_34.xlsx"
+  },
+  "draft_emails": {
+    "input_file": "Output_34.xlsx",
+    "credentials_file": "credentials.json"
   }
 }
 ```
@@ -81,6 +93,18 @@ python gmail_agent.py --query "label:EmailTesting" --output my_emails.xlsx
 python analyze_repos.py --input Output_12.xlsx --output analyzed.xlsx
 ```
 
+### Message Writer Only
+
+```bash
+python message_writer.py --input Output_23.xlsx --output feedback.xlsx
+```
+
+### Email Drafter Only
+
+```bash
+python email_drafter.py --input Output_34.xlsx
+```
+
 ## Output Columns
 
 ### Output_12.xlsx (Gmail Results)
@@ -94,13 +118,24 @@ python analyze_repos.py --input Output_12.xlsx --output analyzed.xlsx
 - All columns from Output_12.xlsx, plus:
 - **Total Lines** - Total lines in repository
 - **Lines in Small Files (<150)** - Lines in files with < 150 lines
-- **Grade** - Total Lines ÷ Small Files Lines
+- **Grade (%)** - Percentage of code in small files: (Small Files Lines ÷ Total Lines) × 100
 
-## Grade Interpretation
+### Output_34.xlsx (With Feedback Messages)
+- All columns from Output_23.xlsx, plus:
+- **Feedback Message** - Personalized feedback based on grade
 
-- **Grade < 1.5** - Very modular codebase (mostly small files)
-- **Grade 1.5-2.5** - Balanced code distribution
-- **Grade > 2.5** - More code in larger files (complex/consolidated)
+### Gmail Drafts
+- Subject: "Feedback message to [ID]"
+- Body: Complete feedback message
+- Location: Gmail Drafts folder
+- Status: Ready for review and sending
+
+## Grade Interpretation & Feedback Styles
+
+- **Grade 90-100%** - Highly modular codebase → Trump-style congratulations
+- **Grade 70-89%** - Good modularity → Netanyahu-style professional feedback
+- **Grade 50-69%** - Balanced code → Shahar Hason-style humorous encouragement
+- **Grade < 50%** - Needs improvement → Dudi Amsalem-style brutally honest critique
 
 ## Common Use Cases
 
@@ -118,6 +153,13 @@ python analyze_repos.py --input Output_12.xlsx --output analyzed.xlsx
   "analyze_repos": {
     "input_file": "submissions.xlsx",
     "output_file": "graded.xlsx"
+  },
+  "generate_messages": {
+    "input_file": "graded.xlsx",
+    "output_file": "graded_with_feedback.xlsx"
+  },
+  "draft_emails": {
+    "input_file": "graded_with_feedback.xlsx"
   }
 }
 ```
@@ -210,6 +252,8 @@ if line_count < 200:  # Change from 150 to 200
 
 - `README.md` - Complete documentation
 - `ANALYZE_REPOS_README.md` - Repository analysis details
+- `MESSAGE_WRITER_README.md` - Message writer details
+- `EMAIL_DRAFTER_README.md` - Email drafter details
 - `config.json.example` - Configuration examples
 
 ## Support

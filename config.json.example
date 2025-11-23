@@ -53,7 +53,18 @@
     "input_file": "important_from_boss.xlsx",
     "output_file": "analyzed_repos.xlsx",
     "temp_dir": "TempFiles",
-    "cleanup": true
+    "cleanup": true,
+    "small_file_threshold": 150
+  },
+
+  "generate_messages": {
+    "input_file": "analyzed_repos.xlsx",
+    "output_file": "repos_with_feedback.xlsx"
+  },
+
+  "draft_emails": {
+    "input_file": "repos_with_feedback.xlsx",
+    "credentials_file": "credentials.json"
   },
 
   "_field_descriptions": {
@@ -63,9 +74,12 @@
     "output": "Output Excel filename (optional, defaults to 'search_N.xlsx')",
     "max_results": "Maximum number of emails to retrieve (optional, defaults to 100)",
     "analyze_repos": "Optional: Analyze GitHub repositories from one of the output files",
-    "input_file": "Excel file containing GitHub URLs to analyze (required for analyze_repos)",
-    "output_file": "Output file for analysis results (optional, defaults to 'Output_23.xlsx')",
+    "input_file": "Excel file containing GitHub URLs to analyze (required for analyze_repos/generate_messages)",
+    "output_file": "Output file for results (optional, defaults vary by agent)",
     "temp_dir": "Directory for cloning repositories (optional, defaults to 'TempFiles')",
-    "cleanup": "Remove cloned repos after analysis (optional, defaults to true)"
+    "cleanup": "Remove cloned repos after analysis (optional, defaults to true)",
+    "small_file_threshold": "Maximum line count for a file to be considered 'small' (optional, defaults to 150)",
+    "generate_messages": "Optional: Generate personalized feedback messages based on grades (90+: Trump, 70-89: Netanyahu, 50-69: Hason, <50: Amsalem)",
+    "draft_emails": "Optional: Create Gmail draft messages from feedback messages with subject 'Feedback message to [ID]'"
   }
 }
