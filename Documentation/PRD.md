@@ -394,10 +394,10 @@ To provide a fully automated, intelligent system that transforms email-based rep
 └─────────────────────────────────────────────────────────────┘
            │              │              │              │
            ▼              ▼              ▼              ▼
-    ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐
-    │  Gmail   │   │ Analyze  │   │ Message  │   │  Email   │
-    │  Agent   │──▶│  Repos   │──▶│  Writer  │──▶│ Drafter  │
-    └──────────┘   └──────────┘   └──────────┘   └──────────┘
+    ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐
+    │  Gmail   │    │ Analyze  │    │ Message  │    │  Email   │
+    │  Agent   │──▶│  Repos    │──▶│  Writer  │──▶│ Drafter  │
+    └──────────┘    └──────────┘    └──────────┘    └──────────┘
          │              │              │              │
          ▼              ▼              ▼              ▼
     Output_12     Output_23     Output_34        Gmail
