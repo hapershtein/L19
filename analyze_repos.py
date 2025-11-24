@@ -43,10 +43,14 @@ class RepoAnalyzer:
         Returns:
             List of dictionaries with repo data
         """
+        logger.info(f"Starting to read data from {self.input_file}")
+
         if not os.path.exists(self.input_file):
+            logger.error(f"Input file not found: {self.input_file}")
             raise FileNotFoundError(f"Input file '{self.input_file}' not found.")
 
         print(f"Reading data from {self.input_file}...")
+        logger.debug(f"Loading workbook: {self.input_file}")
 
         wb = load_workbook(self.input_file)
         ws = wb.active
@@ -129,6 +133,7 @@ class RepoAnalyzer:
                 repo_data['status'] = 'clone_failed'
                 return repo_data
 
+            logger.info(f"[{repo_id}] Clone successful")
             print(f"[{repo_id}] ✓ Clone successful")
             repo_data['status'] = 'cloned'
             repo_data['repo_folder'] = repo_folder
@@ -167,6 +172,7 @@ class RepoAnalyzer:
         repo_folder = repo_data['repo_folder']
         repo_id = repo_data['id']
 
+        logger.info(f"[{repo_id}] Starting code analysis")
         print(f"[{repo_id}] Analyzing code...")
 
         total_lines = 0
@@ -386,6 +392,10 @@ class RepoAnalyzer:
 
 
 async def main():
+    session_id = LoggerConfig.get_session_id()
+    logger.info(f"{"="*70}")
+    logger.info(f"Analyze Repos session started - Session ID: {session_id}")
+    logger.info(f"{"="*70}")
     """Main function to run the analyzer"""
     parser = argparse.ArgumentParser(
         description='Analyze Repos Agent - Clone GitHub repositories and analyze code metrics',

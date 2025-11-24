@@ -7,6 +7,10 @@ import sys
 import argparse
 from openpyxl import load_workbook, Workbook
 from openpyxl.styles import Font, Alignment, PatternFill
+from logger_config import LoggerConfig
+
+# Setup logger
+logger = LoggerConfig.setup_logger('message_writer')
 
 
 class MessageWriter:
@@ -14,12 +18,6 @@ class MessageWriter:
 
     def __init__(self, input_file='Output_23.xlsx', output_file='Output_34.xlsx'):
         """
-
-from logger_config import LoggerConfig
-
-# Setup logger
-logger = LoggerConfig.setup_logger('message_writer')
-
         Initialize the Message Writer
 
         Args:
@@ -38,12 +36,16 @@ logger = LoggerConfig.setup_logger('message_writer')
             List of dictionaries with repo data and grades
         """
         if not os.path.exists(self.input_file):
+            logger.error(f"Input file not found: {self.input_file}")
             raise FileNotFoundError(f"Input file '{self.input_file}' not found.")
 
+        logger.info(f"Reading data from {self.input_file}")
         print(f"Reading data from {self.input_file}...")
 
+        logger.debug(f"Loading workbook: {self.input_file}")
         wb = load_workbook(self.input_file)
         ws = wb.active
+        logger.debug(f"Workbook loaded, reading headers")
 
         # Get headers from first row
         headers = [cell.value for cell in ws[1]]
@@ -59,6 +61,7 @@ logger = LoggerConfig.setup_logger('message_writer')
             small_files_col = next(i for i, h in enumerate(headers) if 'Lines in Small Files' in str(h))
             grade_col = next(i for i, h in enumerate(headers) if 'Grade' in str(h))
         except (ValueError, StopIteration) as e:
+            logger.error(f"Column parsing error: {e}")
             raise ValueError(f"Required column not found in Excel file: {e}")
 
         # Read data rows
@@ -360,6 +363,7 @@ logger = LoggerConfig.setup_logger('message_writer')
 
         # Save the workbook
         wb.save(self.output_file)
+        logger.info(f"Successfully exported to {self.output_file}")
         print(f"✓ Successfully exported to {self.output_file}")
 
     def run(self):
@@ -408,6 +412,10 @@ logger = LoggerConfig.setup_logger('message_writer')
 
 def main():
     """Main function to run the message writer"""
+    session_id = LoggerConfig.get_session_id()
+    logger.info(f"{'='*70}")
+    logger.info(f"Message Writer session started - Session ID: {session_id}")
+    logger.info(f"{'='*70}")
     parser = argparse.ArgumentParser(
         description='Message Writer Agent - Generate personalized feedback based on code grades',
         formatter_class=argparse.RawDescriptionHelpFormatter,

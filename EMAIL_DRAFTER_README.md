@@ -20,6 +20,15 @@ A Python agent that creates Gmail draft messages from feedback messages generate
 - openpyxl package (already in requirements.txt)
 - google-api-python-client package (already in requirements.txt)
 
+## Important: Separate Authentication Token
+
+The Email Drafter uses a **separate authentication token** (`token_drafter.pickle`) from the Gmail Agent (`token.pickle`) because it requires different permissions:
+
+- **Gmail Agent**: Uses `gmail.readonly` scope (read emails only)
+- **Email Drafter**: Uses `gmail.compose` scope (create drafts)
+
+**First Run**: When you run the email drafter for the first time, it will ask you to authenticate again, even if you've already authenticated for the Gmail Agent. This is normal and necessary to grant draft creation permissions.
+
 ## Usage
 
 ### Basic Usage
@@ -285,10 +294,10 @@ Make sure `credentials.json` exists in the project directory. Download from Goog
 
 ### "Token has been expired or revoked"
 
-Delete `token.pickle` and re-authenticate:
+Delete `token_drafter.pickle` and re-authenticate:
 
 ```bash
-rm token.pickle
+rm token_drafter.pickle
 python email_drafter.py --input Output_34.xlsx
 ```
 
@@ -299,16 +308,22 @@ Ensure input file:
 - Has "Feedback Message" column
 - Contains non-empty feedback messages
 
-### "Insufficient permissions"
+### "Insufficient permissions" or "HttpError 403"
 
-The agent requires the `gmail.compose` scope. If you previously authenticated with different scopes:
+The agent requires the `gmail.compose` scope. This error usually means:
+
+1. **You're using the wrong token file**: Make sure you're not using `token.pickle` (which has readonly scope). The email drafter automatically uses `token_drafter.pickle`.
+
+2. **First time running**: If this is your first time running the email drafter, delete any old tokens and authenticate fresh:
 
 ```bash
-rm token.pickle
+rm token_drafter.pickle
 python email_drafter.py --input Output_34.xlsx
 ```
 
-This will re-authenticate with correct permissions.
+3. **Gmail API not enabled**: Ensure Gmail API is enabled in your Google Cloud Console project.
+
+4. **Scope not added to OAuth consent screen**: Make sure your OAuth consent screen includes the compose scope.
 
 ### Rate Limits
 

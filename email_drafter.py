@@ -22,7 +22,9 @@ import openpyxl
 from email.mime.text import MIMEText
 import base64
 
-# If modifying these scopes, delete the file token.pickle
+# If modifying these scopes, delete the file token_drafter.pickle
+# Note: This uses a separate token file from gmail_agent.py because it requires
+# different scopes (gmail.compose vs gmail.readonly)
 SCOPES = ['https://www.googleapis.com/auth/gmail.compose']
 
 
@@ -39,16 +41,20 @@ class EmailDrafter:
         """
         self.input_file = input_file
         self.credentials_file = credentials_file
+        self.token_file = 'token_drafter.pickle'  # Separate token file for compose scope
         self.service = None
         self.data = []
 
     def authenticate(self):
         """Authenticate with Gmail API"""
+        logger.info("Starting Gmail API authentication for draft creation")
+        logger.info(f"Using separate token file: {self.token_file} (for gmail.compose scope)")
         creds = None
 
         # Load saved credentials
-        if os.path.exists('token.pickle'):
-            with open('token.pickle', 'rb') as token:
+        if os.path.exists(self.token_file):
+            logger.debug(f"Loading existing token from {self.token_file}")
+            with open(self.token_file, 'rb') as token:
                 creds = pickle.load(token)
 
         # If no valid credentials, authenticate
@@ -80,15 +86,19 @@ class EmailDrafter:
                     creds = flow.run_console()
 
             # Save credentials for next run
-            with open('token.pickle', 'wb') as token:
+            logger.debug(f"Saving credentials to {self.token_file}")
+            with open(self.token_file, 'wb') as token:
                 pickle.dump(creds, token)
+            logger.info("Credentials saved for future use")
 
         # Build Gmail service
         self.service = build('gmail', 'v1', credentials=creds)
+        logger.info("Successfully authenticated with Gmail API")
         print("✓ Successfully authenticated with Gmail API\n")
 
     def read_excel_data(self):
         """Read feedback messages from Excel file"""
+        logger.info(f"Reading data from {self.input_file}")
         print(f"Reading data from {self.input_file}...")
 
         if not os.path.exists(self.input_file):
@@ -155,14 +165,15 @@ class EmailDrafter:
 
                 self.data.append(data_row)
 
-            print(f"Found {len(self.data)} feedback messages to draft\n")
-            return self.data
-
         except Exception as e:
             print(f"Error reading Excel file: {e}")
             import traceback
             traceback.print_exc()
             sys.exit(1)
+
+        logger.info(f"Found {len(self.data)} feedback messages to draft")
+        print(f"Found {len(self.data)} feedback messages to draft\n")
+        return self.data
 
     def create_draft(self, repo_id, feedback_message, subject_prefix=None):
         """
@@ -205,9 +216,13 @@ class EmailDrafter:
             return draft['id']
 
         except HttpError as error:
+            logger.error(f"HttpError creating draft for {repo_id}: {error}")
+            LoggerConfig.log_exception(logger, error, f"create_draft for {repo_id}")
             print(f"  ✗ Error creating draft: {error}")
             return None
         except Exception as e:
+            logger.error(f"Unexpected error creating draft for {repo_id}: {e}")
+            LoggerConfig.log_exception(logger, e, f"create_draft for {repo_id}")
             print(f"  ✗ Unexpected error: {e}")
             return None
 
@@ -226,11 +241,13 @@ class EmailDrafter:
             feedback = data_row['feedback']
             subject_prefix = data_row.get('subject', None)
 
+            logger.info(f"[{idx}/{len(self.data)}] Creating draft for ID: {repo_id}")
             print(f"[{idx}/{len(self.data)}] Creating draft for ID: {repo_id}")
 
             draft_id = self.create_draft(repo_id, feedback, subject_prefix)
 
             if draft_id:
+                logger.info(f"Draft created successfully for {repo_id}, draft_id={draft_id}")
                 print(f"  ✓ Draft created successfully (ID: {draft_id})")
                 success_count += 1
                 results.append({
@@ -239,6 +256,7 @@ class EmailDrafter:
                     'status': 'success'
                 })
             else:
+                logger.error(f"Failed to create draft for {repo_id}")
                 print(f"  ✗ Failed to create draft")
                 failed_count += 1
                 results.append({
@@ -282,6 +300,10 @@ class EmailDrafter:
 
 
 def main():
+    session_id = LoggerConfig.get_session_id()
+    logger.info("=" * 70)
+    logger.info(f"Email Drafter session started - Session ID: {session_id}")
+    logger.info("=" * 70)
     """Main entry point"""
     parser = argparse.ArgumentParser(
         description='Create Gmail draft messages from feedback messages',

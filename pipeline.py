@@ -36,6 +36,7 @@ class GmailPipeline:
         self.results = []
 
     def load_config(self):
+        logger.info(f"Loading configuration from {self.config_file}")
         """Load and validate JSON configuration"""
         if not os.path.exists(self.config_file):
             raise FileNotFoundError(f"Configuration file '{self.config_file}' not found.")
@@ -88,6 +89,10 @@ class GmailPipeline:
         return validated
 
     def run(self, skip_on_error=False):
+        session_id = LoggerConfig.get_session_id()
+        logger.info(f"{"="*70}")
+        logger.info(f"Pipeline execution started - Session ID: {session_id}")
+        logger.info(f"{"="*70}")
         """
         Execute all searches in the pipeline
 

@@ -1,6 +1,7 @@
 # Sensitive credentials and tokens
 credentials.json
 token.pickle
+token_drafter.pickle
 
 # Output files
 *.xlsx
