@@ -398,10 +398,10 @@ To provide a fully automated, intelligent system that transforms email-based rep
     │  Gmail   │    │ Analyze  │    │ Message  │    │  Email   │
     │  Agent   │──▶│  Repos    │──▶│  Writer  │──▶│ Drafter  │
     └──────────┘    └──────────┘    └──────────┘    └──────────┘
-         │              │              │              │
-         ▼              ▼              ▼              ▼
-    Output_12     Output_23     Output_34        Gmail
-      .xlsx         .xlsx         .xlsx         Drafts
+         │              │                │               │
+         ▼              ▼                ▼               ▼
+    Output_12       Output_23        Output_34         Gmail
+      .xlsx           .xlsx            .xlsx           Drafts
 ```
 
 ### 4.2 Data Flow

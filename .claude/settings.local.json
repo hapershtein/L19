@@ -4,7 +4,8 @@
       "Bash(chmod:*)",
       "Bash(python analyze_repos.py:*)",
       "Bash(python3:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(wc:*)"
     ],
     "deny": [],
     "ask": []
