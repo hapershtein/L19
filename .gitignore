@@ -42,6 +42,9 @@ wheels/
 .installed.cfg
 *.egg
 
+# Backup files from refactoring
+*_old.py
+
 # Virtual environments
 venv/
 env/
