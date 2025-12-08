@@ -5,7 +5,9 @@
       "Bash(python analyze_repos.py:*)",
       "Bash(python3:*)",
       "Bash(find:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(pip install:*)",
+      "Bash(.venv/bin/pip install matplotlib seaborn numpy)"
     ],
     "deny": [],
     "ask": []

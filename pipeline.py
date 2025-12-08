@@ -6,6 +6,7 @@ import sys
 import asyncio
 import argparse
 from pipeline_pkg import GmailPipeline
+from results_tracker import ResultsTracker
 
 
 async def async_main(args):
@@ -25,6 +26,10 @@ async def async_main(args):
 
         if pipeline.config and 'draft_emails' in pipeline.config:
             pipeline.draft_emails(pipeline.config['draft_emails'])
+
+        # Finalize and display Results.md
+        ResultsTracker.finalize_results()
+        ResultsTracker.display_results()
 
         failed = sum(1 for r in pipeline.results if r['status'] == 'error')
         sys.exit(1 if failed > 0 else 0)

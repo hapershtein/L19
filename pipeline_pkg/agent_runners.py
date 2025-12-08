@@ -6,6 +6,7 @@ import asyncio
 from repo_analyzer import RepoAnalyzer
 from message_writer_pkg import MessageWriter
 from email_drafter_pkg import EmailDrafter
+from results_tracker import ResultsTracker
 
 
 class AgentRunners:
@@ -49,6 +50,11 @@ class AgentRunners:
             )
 
             results = await analyzer.run(cleanup=cleanup)
+
+            # Add results to Results.md
+            if results:
+                ResultsTracker.add_repo_analysis_results(results)
+
             return results
 
         except Exception as e:
@@ -90,6 +96,11 @@ class AgentRunners:
             )
 
             results = writer.run()
+
+            # Add results to Results.md
+            if results:
+                ResultsTracker.add_message_writer_results(results)
+
             return results
 
         except Exception as e:
@@ -131,6 +142,11 @@ class AgentRunners:
             )
 
             results = drafter.run()
+
+            # Add results to Results.md
+            if results:
+                ResultsTracker.add_email_drafter_results(results)
+
             return results
 
         except Exception as e:

@@ -11,6 +11,8 @@ Output_*.xlsx
 # Pipeline reports
 *_report.json
 pipeline_report.json
+Results.md
+Results_Charts/
 
 # Temporary repository clones
 TempFiles/

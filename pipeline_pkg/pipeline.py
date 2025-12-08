@@ -5,6 +5,7 @@ import json
 from datetime import datetime
 from gmail_agent_pkg import GmailAgent
 from logger_config import LoggerConfig
+from results_tracker import ResultsTracker
 from .config_loader import ConfigLoader
 from .agent_runners import AgentRunners
 
@@ -46,6 +47,9 @@ class GmailPipeline:
         logger.info(f"{"="*70}")
         logger.info(f"Pipeline execution started - Session ID: {session_id}")
         logger.info(f"{"="*70}")
+
+        # Initialize Results.md
+        ResultsTracker.initialize_results_file()
 
         self.load_config()
 
@@ -132,6 +136,10 @@ class GmailPipeline:
                     print(f"Continuing to next search...")
 
         self._print_summary(total_searches, successful, failed)
+
+        # Add Gmail search results to Results.md
+        ResultsTracker.add_gmail_search_results(self.results)
+
         return self.results
 
     def _print_summary(self, total_searches, successful, failed):
